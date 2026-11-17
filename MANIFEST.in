@@ -1,0 +1,12 @@
+# `labkit init` copies labkit/template/ into a new project, so every file in it must ship, dotfiles and
+# dot-folders included (.gitignore, .env.example, .claude/skills/...). Listing patterns in pyproject.toml missed
+# any dot-folder it did not name; this takes everything, and tests/test_packaging.py builds the wheel to check.
+recursive-include labkit/template *
+# The sdist carries the tests whole. setuptools' default takes only tests/test_*.py, and those tests then ran without
+# tests/conftest.py, which skips the git tests where git is missing (one of them failed instead).
+graft tests
+# tests/test_doc_commands.py reads docs/README.ko.md, so an unpacked sdist runs it too instead of failing on a missing
+# file. LICENSE goes into the sdist through license-files in pyproject.toml.
+include docs/README.ko.md
+# recursive-include takes what is on disk, not what git tracks: keep a developer's own files out of every new project
+global-exclude __pycache__ *.py[cod] .env .DS_Store Thumbs.db *~ *.swp

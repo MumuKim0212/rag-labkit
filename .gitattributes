@@ -1,0 +1,3 @@
+# Keep line endings identical on every machine: the template is copied into projects, and labkit hashes text
+# (criteria wording, card sections), so CRLF/LF drift would show up as spurious changes.
+* text=auto eol=lf

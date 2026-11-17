@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-labkit"
+version = "0.1.9"
+description = "RAG Lab kit: a workflow, templates, and small tools for running RAG experiments you can trust."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "MumuKim0212" }]
+requires-python = ">=3.10"
+dependencies = ["PyYAML"]
+
+[project.urls]
+Homepage = "https://github.com/MumuKim0212/rag-labkit"
+
+[project.scripts]
+labkit = "labkit.cli:main"
+
+[project.optional-dependencies]
+env = ["python-dotenv"]
+dev = ["pytest", "python-dotenv", "setuptools>=77"]   # setuptools: the wheel tests in tests/test_packaging.py
+
+[tool.setuptools.packages.find]
+include = ["labkit*"]
+
+# `labkit init` copies labkit/template/ into a new project, so it must ship with the package, dotfiles included.
+# MANIFEST.in lists it (recursive-include) and include-package-data puts what it lists into the wheel.
+[tool.setuptools]
+include-package-data = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["needs_git: runs git; skipped where git is not installed (tests/conftest.py)"]

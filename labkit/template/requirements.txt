@@ -1,0 +1,7 @@
+# Pin the versions the whole team uses; results depend on them. labkit records the versions of the
+# packages listed here in every run (labkit.repro). Change them only together with the team, and note the
+# change in report/PROCESS.md.
+#
+# labkit is installed from the team's repository (it is not on PyPI); the tag is the labkit release. The
+# repository is private: pip needs git access to it. [env] adds python-dotenv, which reads this project's .env.
+rag-labkit[env] @ git+https://github.com/MumuKim0212/rag-labkit.git@v0.1.9

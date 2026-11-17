@@ -1,0 +1,30 @@
+# Baseline configuration. Every experiment starts from this file.
+# A variant is a separate file that names this one with `base:` and lists ONLY the keys it changes;
+# see configs/README.md. Do not edit values here after the baseline run: that changes every comparison.
+
+name: 000_baseline
+card: null
+description: _what the baseline is, in one line_
+
+system: my-rag                  # a name registered with @register_system
+
+# Settings of your own pipeline go here. Typical groups: corpus, chunking, embedding, retrieval, answer.
+# Whatever you put here becomes part of config_hash, and a variant that changes it shows up in `changed`.
+retrieval:
+  method: vector
+  k: 5
+
+answer:
+  model: example-answer-model
+  prompt: prompts/answer_v1.md
+  temperature: 0
+
+judge:
+  name: my-judge                # a name registered with @register_judge
+  model: example-judge-model    # a different model from every answer candidate; fixed for the project
+  prompt: prompts/judge_v1.md
+
+run:
+  concurrency: 4
+  timeout_s: 120
+  max_retries: 2

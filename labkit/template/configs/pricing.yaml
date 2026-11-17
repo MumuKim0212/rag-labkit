@@ -1,0 +1,13 @@
+# Single source of model prices for cost calculation (labkit.cost). USD per 1M tokens.
+# Output prices include thinking tokens. Note where and when you checked the prices.
+# When a price changes, do not edit old entries in place: add a new entry (or a dated note),
+# so earlier runs keep the cost they had when they ran. labkit reads only `input` and `output`.
+
+currency: USD
+unit: per_1m_tokens
+checked: YYYY-MM-DD             # source: _URL_
+
+models:
+  example-answer-model: {input: 0.00, output: 0.00}
+  example-judge-model:  {input: 0.00, output: 0.00}
+  example-embedding:    {input: 0.00}

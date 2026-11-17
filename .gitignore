@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Test and tool caches
+.pytest_cache/
+
+# Local state of a project using labkit (the template carries its own copy of these rules)
+out/
+scratch/
+.env

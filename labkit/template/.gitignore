@@ -1,0 +1,14 @@
+# Local run state: run log, grades, indexes, report.html. results/ is how runs are shared.
+out/
+scratch/
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/

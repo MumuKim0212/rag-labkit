@@ -1,0 +1,34 @@
+# labkit.yaml: marks the project root and holds the settings labkit's code reads.
+# Every key is optional; the commented ones show what you can set. Reference: labkit.project.
+# Human-readable project facts (corpus, models, budget, deadline) live in docs/WORKFLOW.md, not here.
+
+golden:
+  files: [golden.jsonl]            # exactly these files in golden/ are loaded; others are ignored
+  # pages: corpus/pages.jsonl      # extracted page text, one {"file", "page", "text"} per line, for `labkit golden-check`
+
+max_score: 2                       # a fully correct answer scores this; grades are 0..max_score
+
+# What the right response looks like, per `expected_behavior` value in the golden set.
+# `statuses` are the system's own `status` values that count as right, always a list (`statuses: [answered]`);
+# list two when either is acceptable.
+# Without `behaviors`, the status check is skipped.
+# answerable_default: answer_with_citation   # behavior assumed for answerable items without one
+# behaviors:
+#   answer_with_citation: {group: answer, statuses: [answered]}
+#   abstain_and_redirect: {group: abstain, statuses: [abstained]}
+
+# Your own code: folders added to sys.path, then modules imported so their
+# @register_system / @register_judge / @register_measure run (docs/steps/02-baseline.md).
+pythonpath: [src]
+modules: []                        # e.g. [myproject.systems, myproject.judge]
+
+measures: [retrieval, citation, status]   # per-question measures to compute (labkit.measures)
+
+# index_keys: [corpus, chunking, embedding]   # config keys (dotted prefixes) that change your index (labkit.index)
+# index_dir: out/index/{index_key}/{scope}    # where your builder writes build.json {"calls": [...]}: reports cost.index_build_usd
+main_branch: main                  # tick / approve / revoke are refused on any other git branch
+
+# report:
+#   columns:                       # default: labkit.harness.COLUMNS
+#     - scores.correctness_mean
+#     - {header: Faithfulness, path: metrics.faithfulness, format: "{:.2f}", higher_is_better: true}
