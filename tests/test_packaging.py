@@ -40,8 +40,23 @@ def test_a_new_project_requirements_file_names_a_place_pip_can_install_labkit_fr
 
 @pytest.mark.parametrize("readme", ["README.md", "docs/README.ko.md"])
 def test_the_readme_says_how_to_install_from_the_repository(readme):
-    """The Korean copy has its own install line, so a release bumps it too (see "To release" in README.md)."""
+    """The Korean copy has its own install line, so a release bumps it too."""
     assert f"git+{REPO}.git@v{__version__}" in (ROOT / readme).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("readme", ["README.md", "docs/README.ko.md"])
+def test_the_readmes_serve_a_visitor_not_a_maintainer(readme):
+    """The repository is public: the README says how to get the source (a clone, not "this folder") and links to the
+    workflow the eight steps come from. How a release is made is not for the README, and the public repository is a
+    copy that is not built from commits, so the old release paragraph would misdescribe it."""
+    path = ROOT / readme
+    text = path.read_text(encoding="utf-8")
+    assert f"git clone {REPO}.git" in text
+    assert "labkit/template/docs/WORKFLOW.md" in text
+    assert "To release" not in text and "릴리스할 때는" not in text
+    for target in re.findall(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", text):
+        if not target.startswith(("http", "mailto")):
+            assert (path.parent / target).exists(), f"{readme}: {target} does not exist"
 
 
 def test_pyproject_describes_the_package():
@@ -56,6 +71,14 @@ def test_the_package_declares_the_mit_license_and_where_it_lives():
     assert re.search(r'^license-files = \["LICENSE"\]', pyproject_text(), re.MULTILINE)
     assert re.search(r'^requires = \["setuptools>=77"\]', pyproject_text(), re.MULTILINE)
     assert f"{REPO}" in pyproject_text()                       # [project.urls]
+
+
+@pytest.mark.parametrize("readme, link", [("README.md", "(LICENSE)"), ("docs/README.ko.md", "(../LICENSE)")])
+def test_the_readmes_name_the_license_and_link_to_the_file(readme, link):
+    """The license is named where a visitor reads (the link target is relative to the README's own folder)."""
+    text = (ROOT / readme).read_text(encoding="utf-8")
+    assert f"[MIT License]{link}" in text
+    assert ((ROOT / readme).parent / link.strip("()")).resolve() == (ROOT / "LICENSE").resolve()
 
 
 def test_the_wheel_ships_every_template_file(tmp_path, monkeypatch):
