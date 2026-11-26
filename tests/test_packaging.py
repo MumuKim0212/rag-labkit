@@ -167,8 +167,11 @@ def test_the_sdist_ships_every_test_file_with_the_conftest(tmp_path, monkeypatch
         names = {name.split("/", 1)[1] for name in tar.getnames() if "/" in name}   # drop the rag_labkit-X.Y.Z/ folder
     expected = {f"tests/{p.name}" for p in (ROOT / "tests").iterdir() if p.is_file() and p.suffix == ".py"}
     assert "tests/conftest.py" in expected and len(expected) >= 15
-    # tests/test_doc_commands.py reads the Korean README; without it an unpacked sdist fails that test.
-    expected |= {"LICENSE", "docs/README.ko.md"}
+    # tests/test_doc_commands.py reads the Korean README and tests/test_examples.py runs the example; without them an
+    # unpacked sdist fails those tests.
+    expected |= {"LICENSE", "docs/README.ko.md", "examples/README.md", "examples/run_demo.py", "examples/transcript.txt",
+                 "examples/toy-rag/labkit.yaml", "examples/toy-rag/src/toyrag/system.py",
+                 ".github/workflows/tests.yml"}  # tests/test_ci.py reads the workflow
     assert not expected - names, f"missing from the sdist: {sorted(expected - names)}"
     assert not [n for n in names if "__pycache__" in n or n.endswith(".pyc")]
 

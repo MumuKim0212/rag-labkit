@@ -1,0 +1,20 @@
+# labkit.yaml of the toy example: replaces the one `labkit init` writes (the template's comments explain every key).
+
+golden:
+  files: [golden.jsonl]
+  pages: corpus/pages.jsonl        # extracted page text, for `labkit golden-check`
+
+max_score: 2                       # the toy judge scores 0, 1 or 2
+
+answerable_default: answer_with_citation
+behaviors:
+  answer_with_citation: {group: answer, statuses: [answered]}
+  abstain: {group: abstain, statuses: [abstained]}
+
+pythonpath: [src]
+modules: [toyrag.system, toyrag.judge]
+
+measures: [retrieval, citation, status]
+
+index_keys: [corpus, chunking]     # the toy system reports the key of the index it used (steps["index_key"])
+main_branch: main

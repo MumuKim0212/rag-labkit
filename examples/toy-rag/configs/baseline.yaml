@@ -1,0 +1,32 @@
+# Baseline of the toy example: one sentence per chunk, two chunks to the answer step.
+
+name: 000_baseline
+card: null
+description: One-sentence chunks, k=2, simulated answer model
+
+system: toy-rag
+
+corpus:
+  pages: corpus/pages.jsonl
+
+chunking:
+  sentences: 1                  # sentences per chunk, taken in order within a page
+
+retrieval:
+  k: 2
+
+answer:
+  model: toy-answer-model       # simulated: see src/toyrag/system.py
+  prompt: prompts/answer_v1.md
+  temperature: 0.1              # chance that the simulated model quotes the second-best chunk instead of the best
+  abstain_below: 0.20           # abstain when the best chunk covers less than this share of the question's weight
+
+judge:
+  name: toy-judge
+  model: toy-judge-model        # a different model from the answer model, fixed for the project
+  prompt: prompts/judge_v1.md
+
+run:
+  concurrency: 2
+  timeout_s: 30
+  max_retries: 0

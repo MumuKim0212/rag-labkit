@@ -16,7 +16,8 @@ from labkit.cli import build_parser
 from test_harness import fake_judge, project  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCS = [ROOT / "README.md", ROOT / "docs" / "README.ko.md", *sorted((ROOT / "labkit" / "template").rglob("*.md"))]
+DOCS = [ROOT / "README.md", ROOT / "docs" / "README.ko.md", ROOT / "examples" / "README.md",
+        *sorted((ROOT / "labkit" / "template").rglob("*.md"))]
 SPAN = re.compile(r"`([^`\n]+)`")
 FENCE = re.compile(r"^```[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 STOP = {"·", ";", "|", "&&", "||", ">", "then", "or", "and"}  # several commands in one span: `run … · grade …`

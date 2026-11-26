@@ -1,0 +1,9 @@
+base: baseline.yaml
+name: 001_bigger_chunks
+card: experiments/001-bigger-chunks.md
+description: Two sentences per chunk
+# compare_to: dev_000_baseline    # the experiment of the chain this builds on
+
+# Only the keys this card changes go below: one change per card.
+chunking:
+  sentences: 2

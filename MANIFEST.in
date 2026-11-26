@@ -8,5 +8,10 @@ graft tests
 # tests/test_doc_commands.py reads docs/README.ko.md, so an unpacked sdist runs it too instead of failing on a missing
 # file. LICENSE goes into the sdist through license-files in pyproject.toml.
 include docs/README.ko.md
+# tests/test_examples.py runs examples/run_demo.py over examples/toy-rag, and tests/test_doc_commands.py reads
+# examples/README.md.
+graft examples
+# tests/test_ci.py reads the workflow.
+include .github/workflows/tests.yml
 # recursive-include takes what is on disk, not what git tracks: keep a developer's own files out of every new project
 global-exclude __pycache__ *.py[cod] .env .DS_Store Thumbs.db *~ *.swp

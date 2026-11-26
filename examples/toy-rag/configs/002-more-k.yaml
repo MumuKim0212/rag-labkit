@@ -1,0 +1,9 @@
+base: baseline.yaml
+name: 002_more_k
+card: experiments/002-more-k.md
+description: Four chunks to the answer step instead of two
+# compare_to: dev_000_baseline    # the experiment of the chain this builds on
+
+# Only the keys this card changes go below: one change per card.
+retrieval:
+  k: 4

@@ -1,0 +1,10 @@
+# Prices for the toy example. USD per 1M tokens. The models are simulated, so the prices are invented: they only
+# make the cost columns of the report non-zero.
+
+currency: USD
+unit: per_1m_tokens
+checked: 2026-11-26             # source: invented for this example
+
+models:
+  toy-answer-model: {input: 0.50, output: 1.50}
+  toy-judge-model:  {input: 0.30, output: 1.00}

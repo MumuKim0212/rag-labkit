@@ -1,0 +1,294 @@
+# labkit's own words are shown as they came out; `evaluate` is abridged to the numbers used below.
+# TOYRAG_SEED fixes the simulated model's sampling so this output reproduces; a real model has no such knob.
+
+== 0. Start a project
+
+$ labkit init toy-rag --name "Toy RAG" --git
+created 31 files in toy-rag
+next: cd toy-rag; edit labkit.yaml and docs/WORKFLOW.md (Project facts); labkit status
+
+# copy examples/toy-rag/ over the new project: the corpus, the golden set, the system and the baseline config
+
+$ git add -A && git commit -m "Start the toy project"
+
+$ labkit status
+  1  corpus golden  CURRENT  3/6 criteria hold
+  2  baseline       waiting
+  3  noise          waiting
+  4  proxy          waiting
+  5  triage         waiting
+  6  experiments    waiting
+  7  structure      waiting
+  8  final test     waiting
+
+Current step: 1. Read docs/steps/01-corpus-golden.md, then `labkit check 1`.
+
+
+== 1. The golden set
+
+$ labkit golden-check
+golden-check: 32 items, pages from pages.jsonl: 0 with problems, 0 problems
+
+
+== 2. The baseline: a smoke test first, then every dev question
+
+$ TOYRAG_SEED=1 labkit run --config configs/baseline.yaml --split dev --limit 1
+dev_000_baseline: changed vs baseline = nothing
+{'experiment': 'dev_000_baseline', 'skipped_done': 0, 'ran': 1, 'statuses': {'answered': 1}, 'smoke': True}
+
+$ labkit show dev_000_baseline --qid Q001 --chars 90
+== Q001  run <id>  status=answered  SMOKE (belongs to no result)
+   <time>  latency <s>  tokens in/out 80/23  llm calls 1  searches 1
+question:  When does the workshop open and close on weekdays?
+answer:    Lumen Bikes opens its workshop at 8:00 and closes it at 17:00 on weekdays. [handbook.pdf, … (+5 chars)
+citations: handbook.pdf p.1 (handbook.pdf#1.0)
+search 1:  When does the workshop open and close on weekdays? -> handbook.pdf#1.0, handbook.pdf#1.3
+context (2 units given to the answer step):
+  handbook.pdf#1.0  handbook.pdf p.1: Lumen Bikes opens its workshop at 8:00 and cl … (+29 chars)
+  handbook.pdf#1.3  handbook.pdf p.1: The workshop is closed on public holidays and … (+34 chars)
+steps:     1 model calls; also index_key
+
+$ TOYRAG_SEED=1 labkit run --config configs/baseline.yaml --split dev
+dev_000_baseline: changed vs baseline = nothing
+{'experiment': 'dev_000_baseline', 'skipped_done': 0, 'ran': 24, 'statuses': {'answered': 23, 'abstained': 1}, 'smoke': False}
+
+$ labkit grade --experiment dev_000_baseline
+graded 24 now, 0 already graded: out/grades/dev_000_baseline.jsonl
+
+$ labkit evaluate --experiment dev_000_baseline
+dev_000_baseline: complete=True, graded 24 of 24 questions
+  correctness_mean 0.5625 (0 to 2), fully_correct 0.5417
+  evid@1 0.6500, evid 0.6500, status_ok 0.8750, citation_on_target 1.0000
+  cost: 100.2 tokens per question, 74.0 USD per million questions
+
+
+== 3. Noise: how much a rerun changes by itself
+
+$ TOYRAG_SEED=2 labkit run --config configs/baseline.yaml --split dev --name dev_000_baseline_r2
+dev_000_baseline_r2: changed vs baseline = nothing
+{'experiment': 'dev_000_baseline_r2', 'skipped_done': 0, 'ran': 24, 'statuses': {'answered': 23, 'abstained': 1}, 'smoke': False}
+
+$ labkit grade --experiment dev_000_baseline_r2
+graded 24 now, 0 already graded: out/grades/dev_000_baseline_r2.jsonl
+
+$ labkit evaluate --experiment dev_000_baseline_r2
+dev_000_baseline_r2: complete=True, graded 24 of 24 questions
+  correctness_mean 0.5208 (0 to 2), fully_correct 0.5000
+  evid@1 0.6500, evid 0.6500, status_ok 0.8750, citation_on_target 0.9500
+  cost: 100.0 tokens per question, 73.0 USD per million questions
+
+$ python -m labkit.eval.paired out/grades/dev_000_baseline.jsonl out/grades/dev_000_baseline_r2.jsonl --max-score 2
+n=24  out/grades/dev_000_baseline.jsonl 0.562  out/grades/dev_000_baseline_r2.jsonl 0.521  diff -0.042  95% CI [-0.125, +0.000]
+out/grades/dev_000_baseline_r2.jsonl better 0 / out/grades/dev_000_baseline.jsonl better 1 / same 23
+  out/grades/dev_000_baseline_r2.jsonl better: 
+  out/grades/dev_000_baseline.jsonl better: Q015
+
+$ labkit grade --experiment dev_000_baseline --suffix __regrade1
+graded 24 now, 0 already graded: out/grades/dev_000_baseline__regrade1.jsonl
+
+$ python -m labkit.eval.paired out/grades/dev_000_baseline.jsonl out/grades/dev_000_baseline__regrade1.jsonl --max-score 2
+n=24  out/grades/dev_000_baseline.jsonl 0.562  out/grades/dev_000_baseline__regrade1.jsonl 0.562  diff +0.000  95% CI [+0.000, +0.000]
+out/grades/dev_000_baseline__regrade1.jsonl better 0 / out/grades/dev_000_baseline.jsonl better 0 / same 24
+  out/grades/dev_000_baseline__regrade1.jsonl better: 
+  out/grades/dev_000_baseline.jsonl better: 
+
+$ labkit check 3
+Step 3: 03-noise.md
+  1. [ok  (code)] Both noise runs exist: a rerun of the baseline and a regrade of its answers
+       rerun dev_000_baseline_r2, regrade dev_000_baseline__regrade1.jsonl
+  2. [OPEN] Noise recorded in `report/PROCESS.md` §3 as "(a) X of N changed, (b) Y of N changed"
+       not claimed: labkit tick 3 2 --evidence "…"
+  3. [OPEN] The noise figure (a) is what later comparisons pass as `--noise`
+       not claimed: labkit tick 3 3 --evidence "…"
+
+Not done: 1 of 3 criteria hold.
+(exit 1)
+
+
+== 4. What labkit refuses
+
+# the test split is locked until the last step
+$ labkit run --config configs/baseline.yaml --split test
+test_000_baseline: changed vs baseline = nothing
+labkit: error: test: the test split is locked until the final workflow step; pass --final then
+(exit 1)
+
+# a variant needs a card whose sections 1-4 are written before it runs
+$ labkit new-card bigger-chunks --title "Bigger chunks"
+created experiments/001-bigger-chunks.md and configs/001-bigger-chunks.yaml
+next:
+  1. claim the card in report/PROCESS.md on main (commit that alone)
+  2. git switch -c demo/001-bigger-chunks
+  3. write sections 1-4 of experiments/001-bigger-chunks.md before running anything
+  4. put only the changed keys in configs/001-bigger-chunks.yaml, then: labkit run --config configs/001-bigger-chunks.yaml --split dev --limit 1
+
+# the config now changes chunking.sentences (copied from examples/toy-rag/); the card is still the empty template
+
+$ labkit run --config configs/001-bigger-chunks.yaml --split dev --retrieval-only
+dev_001_bigger_chunks_retrieval: changed vs baseline = {'chunking.sentences': {'from': 1, 'to': 2}}
+labkit: error: experiments/001-bigger-chunks.md: write sections 1–4 before running (section 1 (Hypothesis) still has placeholders: - Change (one variable): _e.g. pass whole pages instead of 5 chunks to; section 2 (Measurement) still has placeholders: - Compared against (reused, not rerun): _experiment name; the adopted ; section 3 (Go/no-go criteria) still has placeholders: - LLM-free gate: _proxy metric net gain ≥ __ questions on dev, larger ; section 4 (LLM budget) still has placeholders: - Planned calls if the gates pass: _answers __ + judge ___)
+(exit 1)
+
+
+== 5. Card 001: bigger chunks
+
+# the card prepared in examples/toy-rag/ replaces the empty one; sections 1-4 are written, 5-7 are not
+
+$ git add -A && git commit -m "Write card 001 sections 1-4"
+
+# LLM-free gate: the same questions, search only, no model call
+$ labkit run --config configs/baseline.yaml --split dev --retrieval-only
+dev_000_baseline_retrieval: changed vs baseline = nothing
+{'experiment': 'dev_000_baseline_retrieval', 'skipped_done': 0, 'ran': 24, 'statuses': {'retrieval_only': 24}, 'smoke': False}
+
+$ labkit evaluate --experiment dev_000_baseline_retrieval
+dev_000_baseline_retrieval: complete=True, graded 0 of 24 questions
+  evid@1 0.6500, evid 0.6500
+
+$ labkit run --config configs/001-bigger-chunks.yaml --split dev --retrieval-only
+dev_001_bigger_chunks_retrieval: changed vs baseline = {'chunking.sentences': {'from': 1, 'to': 2}}
+{'experiment': 'dev_001_bigger_chunks_retrieval', 'skipped_done': 0, 'ran': 24, 'statuses': {'retrieval_only': 24}, 'smoke': False}
+
+$ labkit evaluate --experiment dev_001_bigger_chunks_retrieval
+dev_001_bigger_chunks_retrieval: complete=True, graded 0 of 24 questions
+  evid@1 0.9500, evid 0.9500
+
+$ labkit compare dev_000_baseline_retrieval dev_001_bigger_chunks_retrieval --metric evid@1 --noise 1
+n=20  dev_000_baseline_retrieval 0.650  dev_001_bigger_chunks_retrieval 0.950  diff +0.300  95% CI [+0.100, +0.500]
+dev_001_bigger_chunks_retrieval better 6 / dev_000_baseline_retrieval better 0 / same 14
+  dev_001_bigger_chunks_retrieval better: Q004 Q008 Q010 Q013 Q014 Q018
+  dev_000_baseline_retrieval better: 
+net +6 questions vs noise 1: larger than noise
+        USD/question: 0.0 -> 0.0
+     tokens/question: 0.0 -> 0.0
+  LLM calls/question: 0.0 -> 0.0
+       p90 latency s: (wall clock of a simulated system: not shown)
+
+$ python -m labkit.eval.headroom --scores results/dev_000_baseline/grades.jsonl --before results/dev_000_baseline_retrieval/metrics.jsonl --after results/dev_001_bigger_chunks_retrieval/metrics.jsonl --metric evid@1 --noise 1
+n=20  metric improved 6, worsened 0
+upside 6 (improved, baseline not fully correct): Q004 Q008 Q010 Q013 Q014 Q018
+spent  0 (improved, baseline already fully correct)
+risk   0 (worsened, baseline scored above 0): 
+upside - risk = 6 vs noise 1: run the answer evaluation
+
+# an answer run is refused until section 5 says the gates passed
+$ labkit run --config configs/001-bigger-chunks.yaml --split dev
+dev_001_bigger_chunks: changed vs baseline = {'chunking.sentences': {'from': 1, 'to': 2}}
+labkit: error: experiments/001-bigger-chunks.md: the `Gates passed?` line of section 5 is not filled in. An answer run comes after the LLM-free gates: run `--retrieval-only` and the headroom check, fill section 5 and write `- Gates passed? yes` (a card for an answer-step change writes `n/a: answer-step change, always gets an answer run`); if they did not pass, decide in section 7 without an answer run
+(exit 1)
+
+# section 5 of experiments/001-bigger-chunks.md now reads: - Gates passed? yes: evid@1 +6 questions (noise 1), headroom upside 6, risk 0
+
+$ git add -A && git commit -m "Card 001: the LLM-free gates passed"
+
+$ TOYRAG_SEED=3 labkit run --config configs/001-bigger-chunks.yaml --split dev
+dev_001_bigger_chunks: changed vs baseline = {'chunking.sentences': {'from': 1, 'to': 2}}
+{'experiment': 'dev_001_bigger_chunks', 'skipped_done': 0, 'ran': 24, 'statuses': {'answered': 23, 'abstained': 1}, 'smoke': False}
+
+$ labkit grade --experiment dev_001_bigger_chunks
+graded 24 now, 0 already graded: out/grades/dev_001_bigger_chunks.jsonl
+
+$ labkit evaluate --experiment dev_001_bigger_chunks
+dev_001_bigger_chunks: complete=True, graded 24 of 24 questions
+  correctness_mean 0.6875 (0 to 2), fully_correct 0.6667
+  evid@1 0.9500, evid 0.9500, status_ok 0.8750, citation_on_target 0.8500
+  cost: 153.9 tokens per question, 118.0 USD per million questions
+
+$ labkit compare dev_000_baseline dev_001_bigger_chunks --noise 1
+n=24  dev_000_baseline 0.562  dev_001_bigger_chunks 0.688  diff +0.125  95% CI [-0.042, +0.292]
+dev_001_bigger_chunks better 4 / dev_000_baseline better 1 / same 19
+  dev_001_bigger_chunks better: Q004 Q013 Q014 Q018
+  dev_000_baseline better: Q007
+net +3 questions vs noise 1: larger than noise
+        USD/question: 7.4e-05 -> 0.000118  (1.59x)
+     tokens/question: 100.2 -> 153.9  (1.54x)
+  LLM calls/question: 1.0 -> 1.0  (1.00x)
+       p90 latency s: (wall clock of a simulated system: not shown)
+
+# the card also accepts the same direction in a second independent run
+$ TOYRAG_SEED=4 labkit run --config configs/001-bigger-chunks.yaml --split dev --name dev_001_bigger_chunks_r2
+dev_001_bigger_chunks_r2: changed vs baseline = {'chunking.sentences': {'from': 1, 'to': 2}}
+{'experiment': 'dev_001_bigger_chunks_r2', 'skipped_done': 0, 'ran': 24, 'statuses': {'answered': 23, 'abstained': 1}, 'smoke': False}
+
+$ labkit grade --experiment dev_001_bigger_chunks_r2
+graded 24 now, 0 already graded: out/grades/dev_001_bigger_chunks_r2.jsonl
+
+$ labkit evaluate --experiment dev_001_bigger_chunks_r2
+dev_001_bigger_chunks_r2: complete=True, graded 24 of 24 questions
+  correctness_mean 0.8125 (0 to 2), fully_correct 0.7917
+  evid@1 0.9500, evid 0.9500, status_ok 0.8750, citation_on_target 1.0000
+  cost: 152.9 tokens per question, 117.0 USD per million questions
+
+$ labkit compare dev_000_baseline dev_001_bigger_chunks_r2 --noise 1
+n=24  dev_000_baseline 0.562  dev_001_bigger_chunks_r2 0.812  diff +0.250  95% CI [+0.083, +0.417]
+dev_001_bigger_chunks_r2 better 6 / dev_000_baseline better 0 / same 18
+  dev_001_bigger_chunks_r2 better: Q004 Q008 Q010 Q013 Q014 Q018
+  dev_000_baseline better: 
+net +6 questions vs noise 1: larger than noise
+        USD/question: 7.4e-05 -> 0.000117  (1.58x)
+     tokens/question: 100.2 -> 152.9  (1.53x)
+  LLM calls/question: 1.0 -> 1.0  (1.00x)
+       p90 latency s: (wall clock of a simulated system: not shown)
+
+
+== 6. Card 002: more chunks, stopped at the gate
+
+$ labkit new-card more-k --title "More chunks"
+created experiments/002-more-k.md and configs/002-more-k.yaml
+next:
+  1. claim the card in report/PROCESS.md on main (commit that alone)
+  2. git switch -c demo/002-more-k
+  3. write sections 1-4 of experiments/002-more-k.md before running anything
+  4. put only the changed keys in configs/002-more-k.yaml, then: labkit run --config configs/002-more-k.yaml --split dev --limit 1
+
+$ git add -A && git commit -m "Write card 002 sections 1-4"
+
+$ labkit run --config configs/002-more-k.yaml --split dev --retrieval-only
+dev_002_more_k_retrieval: changed vs baseline = {'retrieval.k': {'from': 2, 'to': 4}}
+{'experiment': 'dev_002_more_k_retrieval', 'skipped_done': 0, 'ran': 24, 'statuses': {'retrieval_only': 24}, 'smoke': False}
+
+$ labkit evaluate --experiment dev_002_more_k_retrieval
+dev_002_more_k_retrieval: complete=True, graded 0 of 24 questions
+  evid@1 0.6500, evid 0.9000
+
+$ labkit compare dev_000_baseline_retrieval dev_002_more_k_retrieval --metric evid@1 --noise 1
+n=20  dev_000_baseline_retrieval 0.650  dev_002_more_k_retrieval 0.650  diff +0.000  95% CI [+0.000, +0.000]
+dev_002_more_k_retrieval better 0 / dev_000_baseline_retrieval better 0 / same 20
+  dev_002_more_k_retrieval better: 
+  dev_000_baseline_retrieval better: 
+net +0 questions vs noise 1: within noise: do not read it as a difference
+        USD/question: 0.0 -> 0.0
+     tokens/question: 0.0 -> 0.0
+  LLM calls/question: 0.0 -> 0.0
+       p90 latency s: (wall clock of a simulated system: not shown)
+
+$ python -m labkit.eval.headroom --scores results/dev_000_baseline/grades.jsonl --before results/dev_000_baseline_retrieval/metrics.jsonl --after results/dev_002_more_k_retrieval/metrics.jsonl --metric evid@1 --noise 1
+n=20  metric improved 0, worsened 0
+upside 0 (improved, baseline not fully correct): 
+spent  0 (improved, baseline already fully correct)
+risk   0 (worsened, baseline scored above 0): 
+upside - risk = 0 vs noise 1: skip the answer run: it cannot show a gain
+
+# section 5 of experiments/002-more-k.md now reads: - Gates passed? no: evid@1 +0 questions, below the noise of 1
+
+$ labkit run --config configs/002-more-k.yaml --split dev
+dev_002_more_k: changed vs baseline = {'retrieval.k': {'from': 2, 'to': 4}}
+labkit: error: experiments/002-more-k.md: section 5 says the gates did not pass (no: evid@1 +0 questions, below the noise). An answer run comes after the LLM-free gates: run `--retrieval-only` and the headroom check, fill section 5 and write `- Gates passed? yes` (a card for an answer-step change writes `n/a: answer-step change, always gets an answer run`); if they did not pass, decide in section 7 without an answer run
+(exit 1)
+
+
+== 7. The report
+
+$ labkit report
+collected 7 experiments into results/SUMMARY.md and out/report.html
+
+# results/SUMMARY.md has more columns; these are the ones the walkthrough uses
+| Experiment | Changed | Score | evid@5 | Tokens/question |
+| --- | --- | --- | --- | --- |
+| dev_000_baseline | baseline config | 0.562 | 0.650 | 100 |
+| dev_000_baseline_r2 | baseline config | 0.521 (-0.042) | 0.650 | 100 (-0) |
+| dev_000_baseline_retrieval | baseline config | – | 0.650 | 0 |
+| dev_001_bigger_chunks | chunking.sentences: 1 → 2 | 0.688 (+0.125) | 0.950 (+0.300) | 154 (+54) |
+| dev_001_bigger_chunks_r2 | chunking.sentences: 1 → 2 | 0.812 (+0.250) | 0.950 (+0.300) | 153 (+53) |
+| dev_001_bigger_chunks_retrieval | chunking.sentences: 1 → 2 | – | 0.950 (+0.300) | 0 |
+| dev_002_more_k_retrieval | retrieval.k: 2 → 4 | – | 0.900 (+0.250) | 0 |

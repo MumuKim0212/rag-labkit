@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      # [dev] brings pytest, python-dotenv and setuptools: without setuptools the wheel and sdist tests are skipped.
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      # No git identity is configured on a runner: the suite and the example set their own where they commit.
+      - name: Test
+        run: python -m pytest -q
